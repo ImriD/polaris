@@ -22,7 +22,10 @@ Provision a fresh Jetson NRU-160, connect it to a real Pixhawk over Ethernet MAV
   2. `rustc --version` on Jetson reports 1.75+ (rustup-installed, not apt)
   3. `cargo build --release` for polaris_bridge completes on Jetson with ROS2 env sourced
   4. `ros2 topic echo /input/steering` receives messages from a manually run polaris node
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Install ROS2 Humble, Rust toolchain, and build dependencies
+- [ ] 01-02-PLAN.md — Sync source, build polaris_msgs, compile all polaris crates
 
 ### Phase 2: Pixhawk MAVLink
 **Goal**: pixhawk_bridge_node exchanges heartbeat and streams telemetry from real Pixhawk over Ethernet
@@ -60,7 +63,7 @@ Provision a fresh Jetson NRU-160, connect it to a real Pixhawk over Ethernet MAV
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Jetson Provisioning | 0/TBD | Not started | - |
+| 1. Jetson Provisioning | 0/2 | Not started | - |
 | 2. Pixhawk MAVLink | 0/TBD | Not started | - |
 | 3. QUIC + Launch | 0/TBD | Not started | - |
 | 4. End-to-End Validation | 0/TBD | Not started | - |
