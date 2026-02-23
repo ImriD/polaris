@@ -60,28 +60,28 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROV-01 | - | Pending |
-| PROV-02 | - | Pending |
-| PROV-03 | - | Pending |
-| PROV-04 | - | Pending |
-| PROV-05 | - | Pending |
-| MAVL-01 | - | Pending |
-| MAVL-02 | - | Pending |
-| MAVL-03 | - | Pending |
-| QUIC-01 | - | Pending |
-| QUIC-02 | - | Pending |
-| QUIC-03 | - | Pending |
-| LNCH-01 | - | Pending |
-| LNCH-02 | - | Pending |
-| LNCH-03 | - | Pending |
-| VALD-01 | - | Pending |
-| VALD-02 | - | Pending |
+| PROV-01 | Phase 1 | Pending |
+| PROV-02 | Phase 1 | Pending |
+| PROV-03 | Phase 1 | Pending |
+| PROV-04 | Phase 1 | Pending |
+| PROV-05 | Phase 1 | Pending |
+| MAVL-01 | Phase 2 | Pending |
+| MAVL-02 | Phase 2 | Pending |
+| MAVL-03 | Phase 2 | Pending |
+| QUIC-01 | Phase 3 | Pending |
+| QUIC-02 | Phase 3 | Pending |
+| QUIC-03 | Phase 3 | Pending |
+| LNCH-01 | Phase 3 | Pending |
+| LNCH-02 | Phase 3 | Pending |
+| LNCH-03 | Phase 3 | Pending |
+| VALD-01 | Phase 4 | Pending |
+| VALD-02 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-23 after roadmap creation*
