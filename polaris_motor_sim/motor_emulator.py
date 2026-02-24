@@ -8,6 +8,7 @@ Run with --test to use WASD keyboard control instead of CAN bus.
 
 import sys
 import math
+import time
 import threading
 
 import pygame
@@ -110,6 +111,9 @@ def main():
 
   if not test_mode:
     import subprocess
+    import os
+    while not os.path.exists('/sys/class/net/can0'):
+      time.sleep(1)
     subprocess.run(['sudo', 'ip', 'link', 'set', 'can0', 'up', 'type', 'can', 'bitrate', '1000000'], check=True)
     import can
     bus = can.interface.Bus(channel='can0', interface='socketcan')
