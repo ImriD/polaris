@@ -1,0 +1,14 @@
+[Unit]
+Description=CAN Motor Emulator
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/polaris/motor_sim/motor_emulator.py
+Restart=on-failure
+RestartSec=3
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=SDL_VIDEODRIVER=wayland
+
+[Install]
+WantedBy=graphical-session.target
