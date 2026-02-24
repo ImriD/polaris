@@ -1,0 +1,181 @@
+POLARIS SYSTEM
+│
+├── 1. PHYSICAL LAYOUT
+│
+│   ├── MAC (operator laptop)
+│   │   ├── runs: polaris_wheel (standalone SDL2 binary, no ROS2)
+│   │   ├── reads: G923 Racing Wheel via SDL2 joystick
+│   │   ├── connects to: fastgpu via QUIC:9876
+│   │   └── role: physical wheel input + telemetry display
+│   │
+│   ├── G923 RACING WHEEL
+│   │   ├── type: USB HID gaming wheel + pedals (PS version)
+│   │   ├── connects to: Mac via USB
+│   │   ├── read by: SDL2 at 50Hz (polaris_wheel)
+│   │   └── mapping:
+│   │       ├── Steering Wheel (axis 0) ──► steering (deadzone 0.02, max 450°)
+│   │       ├── Throttle Pedal (axis 2) ──► throttle (0..1)
+│   │       ├── Brake Pedal (axis 1)    ──► brake (0..1)
+│   │       ├── Right Paddle (R1)       ──► shift up (P→R→N→D)
+│   │       ├── Left Paddle (L1)        ──► shift down (D→N→R→P)
+│   │       ├── Circle (btn 1)          ──► handbrake toggle
+│   │       └── Options (btn 9)         ──► emergency stop
+│   │
+│   ├── FASTGPU (Arch Linux, ROS2 Jazzy)
+│   │   ├── runs: ALL ROS2 nodes + ArduPilot SITL
+│   │   │   ├── wheel_bridge_node  ── QUIC:9876 ↔ ROS2 /input/*
+│   │   │   ├── vehicle_control_node ── passthrough /input/* → /cmd/*
+│   │   │   ├── pixhawk_bridge_node ── MAVLink ↔ /cmd/*, /vehicle/*
+│   │   │   └── tui_dashboard ── operator TUI over SSH + HDMI monitor
+│   │   ├── SSH alias: f (fastgpu.local, user: mates)
+│   │   └── role: all vehicle logic, accessed via SSH from Mac
+│   │
+│   ├── PIXHAWK (autopilot) / ArduPilot SITL
+│   │   ├── real: serial /dev/ttyUSB0 @ 921600 baud
+│   │   ├── SITL: tcpout:127.0.0.1:5762 (mavproxy on 5760)
+│   │   ├── receives: RC_CHANNELS_OVERRIDE (5-channel PWM)
+│   │   └── sends: GLOBAL_POSITION_INT, RAW_IMU
+│   │
+│   └── 5 ACTUATORS (Polaris vehicle, real only)
+│       ├── Ch1: Steering Motor ── PWM 1000-2000, center 1500
+│       ├── Ch2: Brake Actuator ── PWM 1000-2000
+│       ├── Ch3: Throttle Servo ── PWM 1500-2000
+│       ├── Ch4: Gear Selector  ── P=1000, R=1250, N=1500, D=1750
+│       └── Ch5: Handbrake      ── Released=1000, Engaged=2000
+│
+│
+├── 2. CODE (6 crates)
+│
+│   ├── polaris_msgs/ (ROS2 message definitions, CMake + colcon)
+│   │   └── VehicleState.msg
+│   │       ├── float32 steering_angle, throttle_position, brake_pressure
+│   │       ├── uint8 gear_current, bool handbrake_engaged
+│   │       ├── float32 speed_mps, heading_deg
+│   │       ├── float64 lat, lon
+│   │       ├── uint8 mode               # 0=MANUAL 1=REMOTE 2=AUTO
+│   │       └── Time stamp
+│   │
+│   ├── polaris_wheel/ (Rust crate, builds on Mac)
+│   │   └── src/main.rs ── binary: polaris_wheel
+│   │       ├── SDL2 joystick reads G923 at 50Hz
+│   │       ├── QUIC client → wheel_bridge_node:9876
+│   │       ├── sends: 14-byte packets [f32 steer, f32 throt, f32 brake, u8 gear, u8 hbrake]
+│   │       ├── receives: 72-byte packets [telemetry + safe actuators + IMU]
+│   │       └── ratatui TUI: actuator bars, telemetry, connection status
+│   │
+│   ├── polaris_operator/ (Rust crate, builds on fastgpu)
+│   │   ├── src/gamepad.rs ── gilrs gamepad polling (shared by main + gamepad_node)
+│   │   │
+│   │   ├── src/main.rs ── binary: tui_dashboard
+│   │   │   ├── THREAD 1 (main): crossterm + ratatui render loop at 30fps
+│   │   │   ├── THREAD 2 (spawned): tokio runtime + r2r node spin
+│   │   │   ├── publishes: /input/* at 30Hz (when local gamepad connected)
+│   │   │   ├── subscribes: /cmd/*, /input/*, /vehicle/state, /vehicle/imu, /vehicle/gps
+│   │   │   ├── --monitor flag: read-only mode (no publishing, HDMI display)
+│   │   │   └── input priority: local gamepad > remote /input/* > keyboard WASD
+│   │   │
+│   │   ├── src/bin/gamepad_node.rs ── binary: gamepad_node
+│   │   │   ├── publishes: /input/* at 50Hz
+│   │   │   └── standalone headless gamepad-only node
+│   │   │
+│   │   └── src/bin/wheel_bridge_node.rs ── binary: wheel_bridge_node
+│   │       ├── QUIC server on :9876 (accepts polaris_wheel connections)
+│   │       ├── publishes: /input/* at 50Hz (from QUIC wheel commands)
+│   │       ├── subscribes: /vehicle/state, /cmd/*, /vehicle/imu, /vehicle/gps
+│   │       ├── sends: 72-byte telemetry packets to wheel at 30Hz
+│   │       └── wire: 14 bytes up (commands), 72 bytes down (telemetry)
+│   │
+│   ├── polaris_control/ (Rust crate, builds on fastgpu)
+│   │   └── src/main.rs ── binary: vehicle_control_node
+│   │       ├── node name: "vehicle_control"
+│   │       ├── subscribes: /input/* (5 std_msgs topics)
+│   │       ├── publishes: /cmd/* (5 std_msgs topics) at 50Hz
+│   │       └── passthrough: stores latest /input/*, republishes on timer
+│   │
+│   ├── polaris_bridge/ (Rust crate, builds on fastgpu)
+│   │   ├── src/pixhawk.rs ── MAVLink interface
+│   │   │   ├── connect() ── serial or TCP, wait heartbeat (30s timeout)
+│   │   │   ├── send_rc_override() ── map values to PWM, 5 channels
+│   │   │   ├── recv_telemetry() ── parse GLOBAL_POSITION_INT + RAW_IMU
+│   │   │   ├── arm() ── force arm (skips pre-arm checks)
+│   │   │   └── request_data_streams() ── ask for telemetry at N Hz
+│   │   │
+│   │   └── src/main.rs ── binary: pixhawk_bridge_node
+│   │       ├── node name: "pixhawk_bridge"
+│   │       ├── subscribes: /cmd/* (5 std_msgs topics)
+│   │       ├── publishes: /vehicle/state, /vehicle/imu, /vehicle/gps
+│   │       ├── env: PIXHAWK_ADDR (default: serial:/dev/ttyUSB0:921600)
+│   │       └── connection retry every 2s
+│   │
+│   └── polaris_sim/ (Rust crate, builds on fastgpu)
+│       ├── src/bridge.rs ── BeamNG TCP+msgpack client
+│       │   ├── connect() ── TCP to host:64256, Hello handshake (v1.26)
+│       │   ├── attach_vehicle() ── GetCurrentVehicles → StartVehicleConnection
+│       │   ├── send_control() ── steering/throttle/brake/gear/handbrake
+│       │   ├── poll_state() ── SensorRequest → pos/vel/rotation
+│       │   └── wire: [u32 BE length][msgpack payload], auto-incrementing _id
+│       │
+│       └── src/main.rs ── binary: beamng_bridge_node
+│           ├── node name: "beamng_bridge"
+│           ├── subscribes: /cmd/* (5 std_msgs topics)
+│           ├── publishes: /vehicle/state at 50Hz
+│           └── auto-reconnects on disconnect (2s backoff)
+│
+│
+├── 3. ROS2 TOPIC FLOW
+│
+│   [G923 Wheel on Mac]
+│          │ USB/SDL2
+│          ▼
+│   polaris_wheel (Mac binary)
+│          │ QUIC:9876
+│          ▼
+│   wheel_bridge_node (fastgpu, QUIC:9876)
+│          │
+│          │ /input/* (5 std_msgs topics, 50Hz)
+│          ▼
+│   vehicle_control_node (passthrough)
+│          │
+│          │ /cmd/* (5 std_msgs topics, 50Hz)
+│          ▼
+│   pixhawk_bridge_node / beamng_bridge_node
+│   (sends to hardware/sim, reads telemetry)
+│          │
+│          │ /vehicle/state (VehicleState)
+│          │ /vehicle/imu   (sensor_msgs/Imu)
+│          │ /vehicle/gps   (sensor_msgs/NavSatFix)
+│          ▼
+│   tui_dashboard (display) + wheel_bridge_node (→ QUIC → polaris_wheel)
+│
+│
+├── 4. WIRE PROTOCOLS
+│
+│   ├── WHEEL ↔ BRIDGE (QUIC:9876, little-endian)
+│   │   ├── UP (14 bytes): [f32 steering][f32 throttle][f32 brake][u8 gear][u8 handbrake]
+│   │   └── DOWN (72 bytes): [f32 speed][f32 heading][f64 lat][f64 lon][f32 safe_steer]
+│   │       [f32 safe_throt][f32 safe_brake][u8 safe_gear][u8 safe_hbrake][u8 gear_current]
+│   │       [u8 mode][f64 altitude][f32 acc_xyz * 3][f32 gyro_xyz * 3]
+│   │
+│   ├── BRIDGE ↔ PIXHAWK (MAVLink over serial or TCP)
+│   │   ├── OUT: RC_CHANNELS_OVERRIDE (5 channels, PWM 1000-2000)
+│   │   └── IN: GLOBAL_POSITION_INT (lat/lon/alt/heading/speed)
+│   │       + RAW_IMU (acc/gyro)
+│   │
+│   └── SIM ↔ BEAMNG (TCP:64256, msgpack)
+│       ├── Frame: [u32 BE length][msgpack map with type + _id]
+│       ├── Hello → protocol v1.26
+│       ├── GetCurrentVehicles → StartVehicleConnection → vehicle port
+│       ├── Control → steering/throttle/brake/gear/parkingbrake
+│       └── SensorRequest → State → pos[3]/vel[3]/rotation[4]
+│
+│
+└── 5. LAUNCH
+    │
+    └── sim.sh (single script, does everything)
+        ├── sync.sh --build ── rsync code to fastgpu, cargo build --release
+        ├── sim_vehicle.py ── ArduPilot SITL + mavproxy (Python 3.12 venv)
+        ├── pixhawk_bridge_node ── PIXHAWK_ADDR=tcpout:127.0.0.1:5762
+        ├── vehicle_control_node ── SPEED_LIMIT=8
+        ├── wheel_bridge_node ── QUIC:9876 server
+        ├── tui_dashboard --monitor ── HDMI display on fastgpu
+        └── tui_dashboard ── operator TUI over SSH

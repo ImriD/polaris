@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = [
+  "polaris_control",
+  "polaris_sim",
+  "polaris_bridge",
+  "polaris_operator",
+  "polaris_wheel",
+]

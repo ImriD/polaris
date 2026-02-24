@@ -1,0 +1,28 @@
+[package]
+name = "polaris_operator"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "tui_dashboard"
+path = "src/main.rs"
+
+[[bin]]
+name = "gamepad_node"
+path = "src/bin/gamepad_node.rs"
+
+[[bin]]
+name = "wheel_bridge_node"
+path = "src/bin/wheel_bridge_node.rs"
+
+[dependencies]
+r2r = "0.9"
+tokio = { version = "1", features = ["full"] }
+ratatui = "0.29"
+crossterm = "0.28"
+gilrs = "0.11"
+futures = "0.3"
+log = "0.4"
+env_logger = "0.11"
+quinn = "0.11.9"
+rcgen = "0.14.7"
