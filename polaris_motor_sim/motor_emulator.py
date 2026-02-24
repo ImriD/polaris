@@ -20,6 +20,8 @@ P_MIN, P_MAX = -12.5, 12.5
 V_MIN, V_MAX = -45.0, 45.0
 T_MIN, T_MAX = -18.0, 18.0
 
+POSITION_LIMIT = math.radians(450)  # ±450 degrees
+
 # Special commands (8 bytes each)
 ENTER_CMD = bytes([0xFF] * 7 + [0xFC])
 EXIT_CMD  = bytes([0xFF] * 7 + [0xFD])
@@ -83,7 +85,7 @@ class Motor:
     if not self.active:
       return
     pos, vel, torque = decode_command(data)
-    self.position = pos
+    self.position = max(-POSITION_LIMIT, min(POSITION_LIMIT, pos))
     self.velocity = vel
     self._respond(bus)
 
@@ -143,9 +145,9 @@ def main():
     if test_mode:
       keys = pygame.key.get_pressed()
       if keys[pygame.K_a]:
-        motor.position -= step
+        motor.position = max(-POSITION_LIMIT, motor.position - step)
       if keys[pygame.K_d]:
-        motor.position += step
+        motor.position = min(POSITION_LIMIT, motor.position + step)
       if keys[pygame.K_w]:
         step = min(step + 0.005, 0.5)
       if keys[pygame.K_s]:
