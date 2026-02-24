@@ -114,6 +114,7 @@ def main():
     import os
     while not os.path.exists('/sys/class/net/can0'):
       time.sleep(1)
+    subprocess.run(['sudo', 'ip', 'link', 'set', 'can0', 'down'], check=False)
     subprocess.run(['sudo', 'ip', 'link', 'set', 'can0', 'up', 'type', 'can', 'bitrate', '1000000'], check=True)
     import can
     bus = can.interface.Bus(channel='can0', interface='socketcan')
