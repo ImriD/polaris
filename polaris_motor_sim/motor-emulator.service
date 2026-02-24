@@ -1,6 +1,6 @@
 [Unit]
 Description=CAN Motor Emulator
-After=graphical-session.target
+After=default.target
 
 [Service]
 ExecStart=/usr/bin/python3 /home/polaris/motor_sim/motor_emulator.py
@@ -11,4 +11,4 @@ Environment=WAYLAND_DISPLAY=wayland-0
 Environment=SDL_VIDEODRIVER=wayland
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=default.target
